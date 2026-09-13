@@ -1,0 +1,78 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: canduril
+build:
+  local:
+    push: false
+    useDockerCLI: true
+    useBuildkit: true
+    tryImportMissing: false
+  tagPolicy:
+    envTemplate:
+      template: "{{.IMAGE_NAME}}:latest"
+  artifacts:
+    - image: canduril-common
+      context: .
+      docker:
+        dockerfile: docker/Dockerfile.common
+    - image: canduril-ingestor
+      context: .
+      requires:
+        - image: canduril-common
+          alias: BASE_IMAGE
+      docker:
+        dockerfile: docker/Dockerfile.ingestor
+        buildArgs:
+          BASE_IMAGE: canduril-common:latest
+    - image: canduril-normalizer
+      context: .
+      requires:
+        - image: canduril-common
+          alias: BASE_IMAGE
+      docker:
+        dockerfile: docker/Dockerfile.normalizer
+        buildArgs:
+          BASE_IMAGE: canduril-common:latest
+    - image: canduril-snapshotter
+      context: .
+      requires:
+        - image: canduril-common
+          alias: BASE_IMAGE
+      docker:
+        dockerfile: docker/Dockerfile.snapshotter
+        buildArgs:
+          BASE_IMAGE: canduril-common:latest
+    - image: canduril-gateway
+      context: .
+      requires:
+        - image: canduril-common
+          alias: BASE_IMAGE
+      docker:
+        dockerfile: docker/Dockerfile.gateway
+        buildArgs:
+          BASE_IMAGE: canduril-common:latest
+deploy:
+  kubectl:
+    defaultNamespace: canduril
+manifests:
+  kustomize:
+    paths:
+      - k8s/services
+      - k8s/infrastructure
+  rawYaml:
+    - k8s/namespace.yaml
+    - k8s/services/config.yaml
+profiles:
+  - name: minikube
+    activation:
+      - kubeContext: minikube
+    build:
+      local:
+        push: false
+        useDockerCLI: true
+        useBuildkit: false
+        tryImportMissing: false
+    deploy:
+      kubectl:
+        defaultNamespace: canduril

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingestor
+  namespace: canduril
+  labels:
+    app: ingestor
+    component: canduril
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ingestor
+  template:
+    metadata:
+      labels:
+        app: ingestor
+        component: canduril
+    spec:
+      containers:
+      - name: ingestor
+        image: canduril-ingestor:latest
+        imagePullPolicy: Never  # image is built into Minikube's Docker daemon
+        envFrom:
+        - configMapRef:
+            name: canduril-config
+        volumeMounts:
+        - name: ingestor-config
+          mountPath: /app/services/ingestor/config.json
+          subPath: config.json
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        # No HTTP health server (deliberately never built -- see
+        # services/ingestor/app.py's module docstring), so this is a
+        # trivial process-alive check, same as LedgerFlux's own
+        # normalizer StatefulSet uses for the same reason.
+        livenessProbe:
+          exec:
+            command: ["python", "-c", "import sys; sys.exit(0)"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["python", "-c", "import sys; sys.exit(0)"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: ingestor-config
+        configMap:
+          name: canduril-ingestor-config
+          items:
+          - key: config.json
+            path: config.json
