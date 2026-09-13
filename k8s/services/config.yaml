@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: canduril-config
+  namespace: canduril
+data:
+  # NATS JetStream configuration. JS_SUBJECT_PREFIX is deliberately absent:
+  # the raw/normalized subject split (services/common/config.py::
+  # MARKET_TICKS_SUBJECTS) is hardcoded, not env-configurable.
+  NATS_URLS: "nats://nats:4222"
+  JS_STREAM_NAME: "market_ticks"
+  JS_RETENTION_MINUTES: "30"
+
+  # Postgres configuration (gateway + snapshotter). PG_PASSWORD comes from
+  # the canduril-postgres Secret (see k8s/infrastructure/postgres.yaml).
+  PG_HOST: "postgres"
+  PG_PORT: "5432"
+  PG_USER: "postgres"
+  PG_DATABASE: "canduril"

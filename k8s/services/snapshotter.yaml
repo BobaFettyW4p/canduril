@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: snapshotter
+  namespace: canduril
+  labels:
+    app: snapshotter
+    component: canduril
+spec:
+  serviceName: snapshotter-headless
+  replicas: 4  # one per shard -- pod ordinal == shard_id
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: snapshotter
+  template:
+    metadata:
+      labels:
+        app: snapshotter
+        component: canduril
+    spec:
+      # services/snapshotter/app.py::Snapshotter.start() connects to
+      # Postgres with no retry (unlike NATSStreamManager.connect(), which
+      # already retries with backoff) -- without this, a pod starting
+      # before Postgres is ready would crash-loop. Same fix LedgerFlux's
+      # own snapshotter StatefulSet uses.
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:16-alpine
+        command:
+        - sh
+        - -c
+        - |
+          echo "Waiting for PostgreSQL to be ready..."
+          until pg_isready -h postgres -p 5432 -U postgres; do
+            echo "PostgreSQL is unavailable - sleeping"
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: canduril-postgres
+              key: PG_PASSWORD
+      containers:
+      - name: snapshotter
+        image: canduril-snapshotter:latest
+        imagePullPolicy: Never
+        envFrom:
+        - configMapRef:
+            name: canduril-config
+        - secretRef:
+            name: canduril-postgres
+        volumeMounts:
+        - name: snapshotter-config
+          mountPath: /app/services/snapshotter/config.json
+          subPath: config.json
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command: ["python", "-c", "import sys; sys.exit(0)"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["python", "-c", "import sys; sys.exit(0)"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: snapshotter-config
+        configMap:
+          name: canduril-snapshotter-config
+          items:
+          - key: config.json
+            path: config.json
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: snapshotter-headless
+  namespace: canduril
+  labels:
+    app: snapshotter
+spec:
+  clusterIP: None
+  selector:
+    app: snapshotter

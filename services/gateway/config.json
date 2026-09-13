@@ -1,0 +1,8 @@
+{
+  "port": 8000,
+  "input_stream": "market.ticks.normalized",
+  "stream_name": "market_ticks",
+  "num_shards": 4,
+  "max_msgs_per_sec": 100,
+  "burst": 200
+}

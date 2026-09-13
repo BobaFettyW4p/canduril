@@ -1,0 +1,12 @@
+# Gateway service image
+ARG BASE_IMAGE=canduril-common:latest
+FROM ${BASE_IMAGE}
+
+COPY services/gateway/ ./services/gateway/
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+ENTRYPOINT ["python", "-m", "services.gateway.app"]

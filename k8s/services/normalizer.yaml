@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: normalizer
+  namespace: canduril
+  labels:
+    app: normalizer
+    component: canduril
+spec:
+  serviceName: normalizer-headless
+  replicas: 4  # one per shard -- pod ordinal == shard_id, resolved from
+               # HOSTNAME by services/normalizer/app.py::_resolve_shard_id
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: normalizer
+  template:
+    metadata:
+      labels:
+        app: normalizer
+        component: canduril
+    spec:
+      containers:
+      - name: normalizer
+        image: canduril-normalizer:latest
+        imagePullPolicy: Never
+        envFrom:
+        - configMapRef:
+            name: canduril-config
+        volumeMounts:
+        - name: normalizer-config
+          mountPath: /app/services/normalizer/config.json
+          subPath: config.json
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command: ["python", "-c", "import sys; sys.exit(0)"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["python", "-c", "import sys; sys.exit(0)"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: normalizer-config
+        configMap:
+          name: canduril-normalizer-config
+          items:
+          - key: config.json
+            path: config.json
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: normalizer-headless
+  namespace: canduril
+  labels:
+    app: normalizer
+spec:
+  clusterIP: None
+  selector:
+    app: normalizer

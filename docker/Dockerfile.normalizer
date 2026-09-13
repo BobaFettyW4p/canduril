@@ -1,0 +1,7 @@
+# Normalizer service image
+ARG BASE_IMAGE=canduril-common:latest
+FROM ${BASE_IMAGE}
+
+COPY services/normalizer/ ./services/normalizer/
+
+ENTRYPOINT ["python", "-m", "services.normalizer.app"]

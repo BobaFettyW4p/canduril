@@ -1,0 +1,59 @@
+# Common base image for all canduril services.
+#
+# Two stages: the builder compiles canduril._core (CMake/nanobind, which
+# FetchContent-s simdjson and links OpenSSL::Crypto for SHA-256 sharding --
+# see CMakeLists.txt), the runtime stage only needs the resulting venv and
+# the shared libssl3 the extension links against, not the whole C++
+# toolchain.
+
+FROM python:3.12-slim AS builder
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    libssl-dev \
+    ca-certificates \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir uv
+
+# Only what's needed to build the canduril._core wheel -- keeps this layer
+# cacheable independent of any services/ (application code) changes.
+COPY pyproject.toml uv.lock README.md CMakeLists.txt ./
+COPY include/ ./include/
+COPY src/ ./src/
+COPY python/ ./python/
+
+# --no-editable: a plain `uv sync` installs the project (canduril) in
+# editable mode, whose __init__.py is a redirect back to /app/python/
+# rather than a real site-packages copy -- fine for local dev, but the
+# runtime stage below only copies .venv, so the pure-Python glue file
+# would be missing. --no-editable installs a real, self-contained copy.
+RUN uv sync --frozen --no-dev --no-editable
+
+FROM python:3.12-slim AS runtime
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libssl3 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/.venv /app/.venv
+ENV PATH="/app/.venv/bin:${PATH}"
+ENV PYTHONPATH=/app
+# Python block-buffers stdout when it isn't a TTY (i.e. always, in a
+# container), so print()-based logs can sit invisible for minutes before
+# a buffer flush -- confirmed live: NATS showed 1500+ messages flowing in
+# real time while `kubectl logs` looked stuck on a stale error. Unbuffered
+# stdout is what makes `kubectl logs` actually reflect current state.
+ENV PYTHONUNBUFFERED=1
+
+COPY services/__init__.py ./services/__init__.py
+COPY services/common/ ./services/common/
+
+CMD ["python", "-c", "import canduril; print(canduril)"]

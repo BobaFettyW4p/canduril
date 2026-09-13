@@ -1,0 +1,41 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: canduril
+
+resources:
+  - gateway.yaml
+  - ingestor.yaml
+  - normalizer.yaml
+  - snapshotter.yaml
+
+configMapGenerator:
+  # Note: kustomize's configMapGenerator refuses to load files from
+  # outside its own directory tree (a security restriction on path
+  # traversal), so these are local copies of services/<name>/config.json
+  # rather than direct references -- same limitation LedgerFlux's own
+  # k8s/services/configs/ has. Keep in sync with the real config.json if
+  # either changes.
+  - name: canduril-gateway-config
+    files:
+      - config.json=configs/gateway.json
+    options:
+      disableNameSuffixHash: true
+
+  - name: canduril-ingestor-config
+    files:
+      - config.json=configs/ingestor.json
+    options:
+      disableNameSuffixHash: true
+
+  - name: canduril-normalizer-config
+    files:
+      - config.json=configs/normalizer.json
+    options:
+      disableNameSuffixHash: true
+
+  - name: canduril-snapshotter-config
+    files:
+      - config.json=configs/snapshotter.json
+    options:
+      disableNameSuffixHash: true

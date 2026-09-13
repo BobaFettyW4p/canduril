@@ -1,0 +1,8 @@
+{
+  "input_stream": "market.ticks.normalized",
+  "stream_name": "market_ticks",
+  "num_shards": 4,
+  "shard_id": "auto",
+  "flush_interval_ms": 1000,
+  "max_batch_size": 500
+}

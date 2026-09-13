@@ -1,0 +1,12 @@
+build/
+*.so
+*.pyd
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+bench/fixtures/*.jsonl
+!bench/fixtures/sample_capture.jsonl

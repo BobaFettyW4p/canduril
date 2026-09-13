@@ -1,0 +1,37 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "nanobind>=2.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "canduril"
+version = "0.1.0"
+description = "Performance-critical C++ core for a market-data pipeline, with Python orchestration"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "websockets>=15.0.1",
+    "pydantic>=2.0.0",
+    "nats-py>=2.0.0",
+    "fastapi>=0.116.0",
+    "uvicorn>=0.30.0",
+    "psycopg[binary]>=3.2.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.12.11",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["python/canduril"]
+
+[tool.scikit-build.cmake.define]
+CMAKE_BUILD_TYPE = "Release"
