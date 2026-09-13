@@ -1,0 +1,7 @@
+# Snapshotter service image
+ARG BASE_IMAGE=canduril-common:latest
+FROM ${BASE_IMAGE}
+
+COPY services/snapshotter/ ./services/snapshotter/
+
+ENTRYPOINT ["python", "-m", "services.snapshotter.app"]

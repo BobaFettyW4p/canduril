@@ -1,0 +1,7 @@
+# Ingestor service image
+ARG BASE_IMAGE=canduril-common:latest
+FROM ${BASE_IMAGE}
+
+COPY services/ingestor/ ./services/ingestor/
+
+ENTRYPOINT ["python", "-m", "services.ingestor.app"]
