@@ -1,0 +1,8 @@
+{
+  "products": ["BTC-USD", "ETH-USD", "ADA-USD"],
+  "channels": ["ticker", "heartbeat"],
+  "ws_uri": "wss://ws-feed.exchange.coinbase.com",
+  "num_shards": 4,
+  "output_stream": "market.ticks.raw",
+  "stream_name": "market_ticks"
+}
